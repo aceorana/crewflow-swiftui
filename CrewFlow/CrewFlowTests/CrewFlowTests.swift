@@ -5,13 +5,16 @@
 //  Created by user278387 on 12/3/25.
 //
 
-import Testing
+import XCTest
 @testable import CrewFlow
 
-struct CrewFlowTests {
+final class RosterViewModelTests: XCTestCase {
 
-    @Test func example() async throws {
-        // Write your test here and use APIs like `#expect(...)` to check expected conditions.
+    func test_initialLoad_populatesFlights() {
+        let viewModel = RosterViewModel()
+
+        XCTAssertFalse(viewModel.flights.isEmpty, "Expected flights to be loaded on init")
+        XCTAssertEqual(viewModel.flights.count, SampleData.todaysFlights.count)
     }
-
 }
+
