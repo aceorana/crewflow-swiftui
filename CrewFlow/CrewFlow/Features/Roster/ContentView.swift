@@ -1,25 +1,32 @@
 import SwiftUI
 
 struct ContentView: View {
-    // Later this will come from a ViewModel
-    //let flights = SampleData.todaysFlights
-    @StateObject private var viewModel = RosterViewModel();
+    @StateObject private var viewModel = RosterViewModel()
 
     var body: some View {
         NavigationStack {
-            Group{
-                if viewModel.flights.isEmpty{
+            Group {
+                if viewModel.sections.isEmpty {
                     ProgressView("Loading roster...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }else {
-                    List(viewModel.flights){
-                        flight in FlightRow(flight: flight)
+                } else {
+                    List {
+                        ForEach(viewModel.sections) { section in
+                            Section(section.title) {
+                                ForEach(section.flights) { flight in
+                                    NavigationLink {
+                                        FlightDetailView(flight: flight)
+                                    } label: {
+                                        FlightRow(flight: flight)
+                                    }
+                                }
+                            }
+                        }
                     }
                     .listStyle(.insetGrouped)
                 }
             }
-            .navigationTitle("Today's Roster")
-            
+            .navigationTitle("Upcoming Roster")
         }
     }
 }
