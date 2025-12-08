@@ -1,81 +1,158 @@
-//
-//  RosterViewModel.swift
-//  CrewFlow
-//
-//  Created by user278387 on 12/4/25.
-//
-
 import Foundation
 import Combine
 
-struct RosterSection: Identifiable {
-    let id = UUID()
-    let date: Date
-    let title: String
-    let flights: [Flight]
-}
+final class RosterViewModel: ObservableObject {
 
-@MainActor
-class RosterViewModel: ObservableObject {
-    @Published var flights: [Flight] = []
-    @Published var sections: [RosterSection] = []
-    @Published var isLoading = false
+    // MARK: - Filter types
+
+    enum DutyFilter: String, CaseIterable, Identifiable {
+        case all = "All"
+        case flight = "Flight"
+        case ground = "Ground"
+        case layover = "Layover"
+
+        var id: String { rawValue }
+    }
+
+    // MARK: - Raw flights (loaded / persisted)
+
+    @Published var flights: [Flight] = [] {
+        didSet {
+            // Persist to disk whenever the list changes
+            FlightStorage.save(flights)
+            applyFilters()
+        }
+    }
+
+    // MARK: - Filter & Search State
+
+    @Published var searchText: String = "" {
+        didSet { applyFilters() }
+    }
+
+    @Published var selectedDutyFilter: DutyFilter = .all {
+        didSet { applyFilters() }
+    }
+
+    // What the UI actually shows
+    @Published var filteredFlights: [Flight] = []
+
+    // MARK: - Init
 
     init() {
-        loadRoster()
-    }
-
-    func loadRoster() {
-        isLoading = true
-
-        // Simulate async load
-        DispatchQueue.global().asyncAfter(deadline: .now() + 0.5) {
-            let loadedFlights = SampleData.upcomingFlights
-
-            Task { @MainActor in
-                self.flights = loadedFlights
-                self.sections = self.buildSections(from: loadedFlights)
-                self.isLoading = false
-            }
-        }
-    }
-
-    // MARK: - Private helpers
-    //Grouping flights by departureDate into RosterSections and label them Today, Tomorrow or a formatted date string
-    private func buildSections(from flights: [Flight]) -> [RosterSection] {
-        let calendar = Calendar.current
-
-        // Group by day
-        let grouped = Dictionary(grouping: flights) { flight in
-            calendar.startOfDay(for: flight.departureDate)
-        }
-
-        let sortedDates = grouped.keys.sorted()
-
-        return sortedDates.compactMap { date in
-            guard let flightsForDay = grouped[date] else { return nil }
-
-            let sortedFlights = flightsForDay.sorted { $0.departureTime < $1.departureTime }
-            let title = dayLabel(for: date)
-
-            return RosterSection(date: date, title: title, flights: sortedFlights)
-        }
-    }
-
-    private func dayLabel(for date: Date) -> String {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-
-        if calendar.isDate(date, inSameDayAs: today) {
-            return "Today"
-        } else if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
-                  calendar.isDate(date, inSameDayAs: tomorrow) {
-            return "Tomorrow"
+        let saved = FlightStorage.load()
+        if saved.isEmpty {
+            flights = SampleData.upcomingFlights   
         } else {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "EEE, MMM d"
-            return formatter.string(from: date)
+            flights = saved
+        }
+
+        applyFilters()
+    }
+
+    // MARK: - Test helper (for persistence)
+//
+//    func addTestFlight() {
+//        print("➡️ addTestFlight tapped")
+//
+//        let test = Flight(
+//            flightNumber: "WS9999",
+//            origin: "YYC",
+//            destination: "YVR",
+//            departureTime: "12:00",
+//            arrivalTime: "12:45",
+//            departureDate: Date(),
+//            arrivalDate: Date().addingTimeInterval(60 * 60),
+//            status: .onTime,
+//            dutyType: .flight,
+//            position: "FA1",
+//            marketingCarrier: "WS",
+//            notes: "Test persisted flight"
+//        )
+//
+//        flights.append(test)  // triggers didSet → save + applyFilters
+//    }
+
+    // MARK: - Filtering logic
+
+    private func applyFilters() {
+        let today = Date()
+        let trimmedSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasSearch = !trimmedSearch.isEmpty
+        let query = trimmedSearch.lowercased()
+
+        filteredFlights = flights.filter { flight in
+
+            // 1) Date: only today's flights
+            let isToday = Calendar.current.isDate(flight.departureDate,
+                                                  inSameDayAs: today)
+
+            // 2) Duty filter
+            let dutyMatches: Bool
+            switch selectedDutyFilter {
+            case .all:
+                dutyMatches = true
+            case .flight:
+                dutyMatches = (flight.dutyType == .flight)
+            case .ground:
+                dutyMatches = (flight.dutyType == .ground)
+            case .layover:
+                dutyMatches = (flight.dutyType == .layover)
+            }
+
+            // 3) Search filter
+            let searchMatches: Bool
+            if hasSearch {
+                searchMatches =
+                    flight.flightNumber.lowercased().contains(query) ||
+                    flight.origin.lowercased().contains(query) ||
+                    flight.destination.lowercased().contains(query) ||
+                    (flight.position?.lowercased().contains(query) ?? false)
+            } else {
+                searchMatches = true
+            }
+
+            return isToday && dutyMatches && searchMatches
         }
     }
-}
+    
+    func addFlight(
+        flightNumber: String,
+        origin: String,
+        destination: String,
+        departure: Date,
+        arrival: Date,
+        dutyType: DutyType,
+        position: String? = nil,
+        marketingCarrier: String? = nil,
+        notes: String? = nil
+    ) {
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"       // matches 07:45 style
 
+        let departureTime = timeFormatter.string(from: departure)
+        let arrivalTime = timeFormatter.string(from: arrival)
+
+        let calendar = Calendar.current
+        let departureDate = calendar.startOfDay(for: departure)
+        let arrivalDate = calendar.startOfDay(for: arrival)
+
+        let newFlight = Flight(
+            flightNumber: flightNumber,
+            origin: origin,
+            destination: destination,
+            departureTime: departureTime,
+            arrivalTime: arrivalTime,
+            departureDate: departureDate,
+            arrivalDate: arrivalDate,
+            status: .onTime,                      // default; you can make this a picker later
+            dutyType: dutyType,
+            position: position,
+            marketingCarrier: marketingCarrier,
+            notes: notes
+        )
+
+        flights.append(newFlight)                // triggers save + re-filter
+    }
+
+}
