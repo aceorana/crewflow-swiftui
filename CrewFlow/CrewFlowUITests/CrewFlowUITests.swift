@@ -1,10 +1,3 @@
-//
-//  CrewFlowUITests.swift
-//  CrewFlowUITests
-//
-//  Created by user278387 on 12/3/25.
-//
-
 import XCTest
 
 final class CrewFlowUITests: XCTestCase {

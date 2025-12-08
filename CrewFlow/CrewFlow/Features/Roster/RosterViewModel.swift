@@ -41,6 +41,7 @@ final class RosterViewModel: ObservableObject {
 
     init() {
         let saved = FlightStorage.load()
+        //flights = saved      // no auto-seed, start from what’s persisted
         if saved.isEmpty {
             flights = SampleData.upcomingFlights   
         } else {
@@ -49,29 +50,6 @@ final class RosterViewModel: ObservableObject {
 
         applyFilters()
     }
-
-    // MARK: - Test helper (for persistence)
-//
-//    func addTestFlight() {
-//        print("➡️ addTestFlight tapped")
-//
-//        let test = Flight(
-//            flightNumber: "WS9999",
-//            origin: "YYC",
-//            destination: "YVR",
-//            departureTime: "12:00",
-//            arrivalTime: "12:45",
-//            departureDate: Date(),
-//            arrivalDate: Date().addingTimeInterval(60 * 60),
-//            status: .onTime,
-//            dutyType: .flight,
-//            position: "FA1",
-//            marketingCarrier: "WS",
-//            notes: "Test persisted flight"
-//        )
-//
-//        flights.append(test)  // triggers didSet → save + applyFilters
-//    }
 
     // MARK: - Filtering logic
 
@@ -145,7 +123,7 @@ final class RosterViewModel: ObservableObject {
             arrivalTime: arrivalTime,
             departureDate: departureDate,
             arrivalDate: arrivalDate,
-            status: .onTime,                      // default; you can make this a picker later
+            status: .onTime,
             dutyType: dutyType,
             position: position,
             marketingCarrier: marketingCarrier,
@@ -153,6 +131,12 @@ final class RosterViewModel: ObservableObject {
         )
 
         flights.append(newFlight)                // triggers save + re-filter
+    }
+    
+    // MARK: - Lookup
+
+    func flight(withId id: Flight.ID) -> Flight? {
+        flights.first { $0.id == id }
     }
 
 }

@@ -1,10 +1,3 @@
-//
-//  SampleData.swift
-//  CrewFlow
-//
-//  Created by user278387 on 12/3/25.
-//
-
 import Foundation
 
 enum SampleData {

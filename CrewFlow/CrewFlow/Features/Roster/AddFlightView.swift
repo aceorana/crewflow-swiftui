@@ -1,10 +1,3 @@
-//
-//  AddFlightView.swift
-//  CrewFlow
-//
-//  Created by user278387 on 12/7/25.
-//
-
 import SwiftUI
 
 struct AddFlightView: View {

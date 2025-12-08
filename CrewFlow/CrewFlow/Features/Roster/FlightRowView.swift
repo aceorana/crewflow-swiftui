@@ -1,9 +1,3 @@
-//
-//  FlightRowView.swift
-//  CrewFlow
-//
-//  Created by user278387 on 12/7/25.
-//
 
 import SwiftUI
 
@@ -70,7 +64,7 @@ struct FlightRowView: View {
             // warm amber for delay
             return Color.orange
         case .cancelled:
-            // softer red so it’s not screaming
+            // softer red
             return Color.red
         }
     }

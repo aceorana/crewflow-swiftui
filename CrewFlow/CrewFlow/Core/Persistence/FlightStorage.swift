@@ -1,10 +1,3 @@
-//
-//  FlightStorage.swift
-//  CrewFlow
-//
-//  Created by user278387 on 12/7/25.
-//
-
 import Foundation
 
 struct FlightStorage {

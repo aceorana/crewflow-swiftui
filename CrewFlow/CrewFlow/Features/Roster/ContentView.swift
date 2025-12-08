@@ -3,9 +3,10 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = RosterViewModel()
     @State private var showingAddFlight = false
+    @State private var navigationPath = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 // Empty state overlay
                 if viewModel.filteredFlights.isEmpty {
@@ -20,7 +21,7 @@ struct ContentView: View {
 
                     // Flights
                     ForEach(viewModel.filteredFlights) { flight in
-                        NavigationLink(value: flight) {
+                        NavigationLink(value: flight.id) {
                             FlightRowView(flight: flight)
                         }
                     }
@@ -41,8 +42,22 @@ struct ContentView: View {
                 AddFlightView(viewModel: viewModel)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationDestination(for: Flight.self) { flight in
-                FlightDetailView(flight: flight)
+            .navigationDestination(for: Flight.ID.self) { id in
+                if let flight = viewModel.flight(withId: id) {
+                    FlightDetailView(flight: flight)
+                } else {
+                    // In case the flight was deleted or no longer matches filters
+                    VStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.largeTitle)
+                        Text("This duty is no longer available.")
+                            .font(.headline)
+                        Text("It may have been removed or changed.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
             .searchable(
                 text: $viewModel.searchText,
@@ -51,7 +66,6 @@ struct ContentView: View {
             )
         }
     }
-
 
     // MARK: - Subviews
 
@@ -77,50 +91,4 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-
-//    private func flightRow(for flight: Flight) -> some View {
-//        HStack {
-//            VStack(alignment: .leading, spacing: 4) {
-//                // e.g. "WS 123"
-//                Text("\(flight.marketingCarrier ?? "") \(flight.flightNumber)".trimmingCharacters(in: .whitespaces))
-//                    .font(.headline)
-//
-//                HStack(spacing: 6) {
-//                    Text("\(flight.origin) → \(flight.destination)")
-//                        .font(.subheadline)
-//                    Text("·")
-//                    Text(flight.departureTime)
-//                }
-//                .foregroundStyle(.secondary)
-//
-//                if let position = flight.position {
-//                    Text(position)
-//                        .font(.caption)
-//                        .padding(.horizontal, 6)
-//                        .padding(.vertical, 2)
-//                        .background(Color.secondary.opacity(0.1))
-//                        .clipShape(Capsule())
-//                }
-//            }
-//
-//            Spacer()
-//
-//            Text(flight.status.rawValue)
-//                .font(.caption)
-//                .padding(.horizontal, 6)
-//                .padding(.vertical, 4)
-//                .background(statusColor(for: flight.status).opacity(0.15))
-//                .foregroundStyle(statusColor(for: flight.status))
-//                .clipShape(Capsule())
-//        }
-//        .padding(.vertical, 6)
-//    }
-
-//    private func statusColor(for status: FlightStatus) -> Color {
-//        switch status {
-//        case .onTime: return .green
-//        case .delayed: return .orange
-//        case .cancelled: return .red
-//        }
-//    }
 }
