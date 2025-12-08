@@ -1,0 +1,31 @@
+name: iOS CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: Build iOS app
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # OPTIONAL: If you use a specific Xcode version, you can set it here.
+      # Check GitHub macOS image docs for available versions.
+      # - name: Select Xcode version
+      #   run: sudo xcode-select -s /Applications/Xcode_16.app
+
+      - name: List Xcode version
+        run: xcodebuild -version
+
+      - name: Build app (no tests yet)
+        run: |
+            xcodebuild \
+            -project CrewFlow/CrewFlow.xcodeproj \
+            -scheme CrewFlow \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            clean build
